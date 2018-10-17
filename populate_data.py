@@ -8,6 +8,7 @@ from ts.tsdb.models import BehaviorMalware
 from ts.tsdb.models import BehaviorAttackPattern
 from ts.tsdb.models import BehaviorExploit
 from ts.tsdb.models import TipReport
+from ts.tsdb.models import UserOrganization
 import json
 from psycopg2.extras import Json
 from pprint import pprint
@@ -35,6 +36,11 @@ def get_ttps(data):
 
 def get_tip_reports(data):
     return data["Tip_Reports"]
+
+def get_user_org(id):
+    for user_org in User_Organizations:
+        if user_org.id == id:
+            return user_org
 
 def add_actors(actors):
     for actor in actors:
@@ -124,19 +130,29 @@ def add_ttp_behavior_exploits(ttp, exploits):
 
 def add_tip_reports(tip_reports):
     for tip_report in tip_reports:
-        TipReport.objects.get_or_create(\
+        print("TAGS_V2")
+        pprint(type(json.dumps(tip_report["tags_v2"])))
+        tags = Json(tip_report["tags_v2"])
+        print(type(tags))
+        obj_tip_report, created = TipReport.objects.get_or_create(\
             name=tip_report["name"],\
             tlp=tip_report["tlp"],\
-            source=tip_report["source"])
-
+            source=tip_report["source"]\
+        )
+        #TODO create userOrg
+        tags = obj_tip_report.add_tags(tip_report["tags_v2"], get_user_org(tip_report["owner_org_id"]))
+        print("TAGS")
+        print(tags)
 
 data = get_data()
+User_Organizations = UserOrganization.objects.get_query_set()
+print(User_Organizations)
 # print("RETURNED DATA TPYE")
 # print(type(data))
 # actors = get_actors(data)
 # add_actors(actors)
 # #add_actor_relations(actors)
-# 
+#
 # ttps = get_ttps(data)
 # add_ttps(ttps)
 
