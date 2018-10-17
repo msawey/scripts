@@ -13,10 +13,6 @@ import json
 from psycopg2.extras import Json
 from pprint import pprint
 
-class Org:
-    def __init__(self, id):
-        self.id = id
-
 def get_data():
     try:
         with open('scripts/actor.json') as data_file:
@@ -44,13 +40,7 @@ def get_user_org(id):
 
 def add_actors(actors):
     for actor in actors:
-        # TODO
-        # tags_v2 ask Andy
-        print("TAGS")
-        pprint(actor["tags_v2"])
-        print(type(Json(actor["tags_v2"])))
         obj_actor, created = Actor.objects.get_or_create(name=actor["name"],\
-#            tags_v2=Json(actor["tags_v2"]),\
             tlp=actor["tlp"],\
             start_date=actor["start_date"],\
             soph_type_id=actor["soph_type"]["id"],\
@@ -58,22 +48,11 @@ def add_actors(actors):
             organization_id=actor["organization_id"],\
             owner_user_id=actor["owner_user"]["id"]\
             )
-        # Come back to
-        org = Org(1)
-        #obj_actor = Actor.objects.get(name=actor["name"], organization_id=actor["organization_id"])
-#        add_actor_tags(obj_actor, actor["tags_v2"], org)
         add_actor_aliases(obj_actor, actor["aliases"])
         add_actor_motivations(obj_actor, actor["motivations"])
         add_actor_victims(obj_actor, actor["victims"])
         obj_actor.add_tags(actor["tags_v2"], get_user_org(actor["organization_id"]))
         obj_actor.save()
-
-# TODO: Tags
-# Possibly re-usable for TTPs etc.
-#def add_actor_tags(actor, tags, org):
-#    print("Org ID")
-#    print(org.id)
-#    actor.add_tags(tags, org)
 
 def add_actor_aliases(actor, aliases):
     for alias in aliases:
@@ -102,13 +81,10 @@ def add_ttps(ttps):
     for ttp in ttps:
         obj_ttp, created = Ttp.objects.get_or_create(\
             name=ttp["name"],\
-#            TAGS
             tlp=ttp["tlp"],\
-            # behavior_malware
             description=ttp["description"],\
             organization_id=ttp["organization_id"]\
             )
-        #obj_ttp = Ttp.objects.get(name=ttp["name"], organization_id=ttp["organization_id"])
         add_ttp_aliases(obj_ttp, ttp["aliases"])
         add_ttp_behavior_malware(obj_ttp, ttp["behavior_malware"])
         add_ttp_behavior_attackpatterns(obj_ttp, ttp["behavior_attackpatterns"])
@@ -134,19 +110,11 @@ def add_ttp_behavior_exploits(ttp, exploits):
 
 def add_tip_reports(tip_reports):
     for tip_report in tip_reports:
-        #print("TAGS_V2")
-        #pprint(type(json.dumps(tip_report["tags_v2"])))
-        #tags = Json(tip_report["tags_v2"])
-        #print(type(tags))
         obj_tip_report, created = TipReport.objects.get_or_create(\
             name=tip_report["name"],\
             tlp=tip_report["tlp"],\
             source=tip_report["source"]\
         )
-        #TODO create userOrg
-        print(type(obj_tip_report))
-        #print("TAGS_V2")
-        #print(tip_report["tags_v2"])
         obj_tip_report.add_tags(tip_report["tags_v2"], get_user_org(tip_report["owner_org_id"]))
         obj_tip_report.save()
 
