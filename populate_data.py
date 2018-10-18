@@ -40,7 +40,12 @@ def get_user_org(id):
 
 def add_actors(actors):
     for actor in actors:
-        obj_actor, created = Actor.objects.get_or_create(name=actor["name"],\
+        print(actor["name"][:255])
+        print(len(actor["name"]))
+        print(len(actor["name"][:255]))
+        print(actor["owner_user"]["id"])
+        obj_actor, created = Actor.objects.get_or_create(\
+            name=actor["name"][:255],\
             tlp=actor["tlp"],\
             start_date=actor["start_date"],\
             soph_type_id=actor["soph_type"]["id"],\
