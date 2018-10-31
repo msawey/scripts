@@ -12,10 +12,14 @@ from ts.tsdb.models import UserOrganization
 import json
 import os
 import sys
-from psycopg2.extras import Json
+from  django.core.exceptions import
 from pprint import pprint
 
-def get_threat_models(data):
+THREAT_MODEL_FILE_PATH = '/Users/msawey/threatstream/scripts/data.json'
+ASSOCIATION_FILE_PATH = '/Users/msawey/threatstream/scripts/associations.json'
+
+def get_threat_models():
+    data = get_data(THREAT_MODEL_FILE_PATH)
     actors = []
     ttps = []
     tip_reports = []
@@ -26,19 +30,49 @@ def get_threat_models(data):
             ttps.append(threat_model)
         if threat_model["model_type"] == "tipreport":
             tip_reports.append(threat_model)
-    return (actors, ttps, tip_reports)
+    return actors, ttps, tip_reports
 
-def get_data():
+def get_data(file_path):
     try:
         print(os.path.abspath(os.path.dirname(sys.argv[0])))
-        with open('/Users/msawey/threatstream/scripts/data.json') as data_file:
+        with open(file_path) as data_file:
             objects = json.load(data_file)
             data = objects.get("objects")
             return data
     except Exception as e:
         print(e)
         print("File does not exist")
+        print(file_path)
         quit()
+
+def get_association_data():
+    return get_data(ASSOCIATION_FILE_PATH)
+
+def add_association_data(associations):
+    for association in associations:
+        try:
+            if association.get("type1") == 'actor':
+                actor = Actor.objects.get(id=association.get("id1"))
+                add_threat_model_association(actor, association)
+            if association.get("type1") == 'ttp':
+                ttp = Ttp.objects.get(id=association.get("id1"))
+                add_threat_model_association(ttp, association)
+            if association.get("type1") == 'tipreport':
+                tipreport = TipReport.objects.get(id=association.get("id1"))
+                add_threat_model_association(tipreport, association)
+        except:
+            print("Threat Model does not exist")
+
+def add_threat_model_association(threat_model, association):
+    try:
+        if association.get("type2") == 'actor':
+            threat_model.actors.add(association.get("id2"))
+        elif association.get("type2") == 'ttp':
+            threat_model.ttps.add(association.get("id2"))
+        elif association.get("type2") == 'tipreport':
+            threat_model.tipreports.add(association.get("id2"))
+    except:
+        print("Association does not exist")
 
 def get_actors(data):
     actors = []
@@ -79,26 +113,27 @@ def add_actors(actors):
             organization_id=actor.get("organization_id"),\
             owner_user_id=actor_owner_user_id\
             )
-        add_actor_aliases(obj_actor, actor["aliases"])
-        add_actor_motivations(obj_actor, actor["motivations"])
-        add_actor_victims(obj_actor, actor["victims"])
-        obj_actor.add_tags(actor["tags_v2"], get_user_org(actor["organization_id"]))
+        add_actor_aliases(obj_actor, actor.get("aliases"))
+        add_actor_motivations(obj_actor, actor.get("motivations"))
+        add_actor_victims(obj_actor, actor.get("victims"))
+        obj_actor.add_tags(actor.get("tags_v2"), get_user_org(actor.get("organization_id")))
         obj_actor.save()
 
 def add_actor_aliases(actor, aliases):
     for alias in aliases:
-        ActorAlias.objects.get_or_create(actor_id=actor.id, name=alias["name"])
+        ActorAlias.objects.get_or_create(actor_id=actor.id, name=alias.get("name"))
 
 def add_actor_motivations(actor, motivations):
     for motivation in motivations:
-        ActorMotivation.objects.get_or_create(actor_id=actor.id, description=motivation["description"], m_type_id=motivation["m_type"]["id"])
+        #TODO m_type_id to use .get()
+        ActorMotivation.objects.get_or_create(actor_id=actor.id, description=motivation.get("description"), m_type_id=motivation["m_type"]["id"])
 
 def add_actor_victims(actor, victims):
     for victim in victims:
-        victim_type = VictimType.objects.get(id=victim["id"])
+        victim_type = VictimType.objects.get(id=victim.get("id"))
         actor.victims.add(victim_type)
 
-def add_actor_relations(actors):
+def add_actor_(actors):
     for actor in actors:
         if (actor["Actors"]):
             # TODO
@@ -111,10 +146,10 @@ def add_actor_relations(actors):
 def add_ttps(ttps):
     for ttp in ttps:
         obj_ttp, created = Ttp.objects.get_or_create(\
-            name=ttp["name"],\
-            tlp=ttp["tlp"],\
-            description=ttp["description"],\
-            organization_id=ttp["organization_id"]\
+            name=ttp.get("name"),\
+            tlp=ttp.get("tlp"),\
+            description=ttp.get("description"),\
+            organization_id=ttp.get("organization_id")\
             )
         add_ttp_aliases(obj_ttp, ttp["aliases"])
         add_ttp_behavior_malware(obj_ttp, ttp["behavior_malware"])
@@ -149,21 +184,21 @@ def add_tip_reports(tip_reports):
         obj_tip_report.add_tags(tip_report["tags_v2"], get_user_org(tip_report["owner_org_id"]))
         obj_tip_report.save()
 
-data = get_data()
 User_Organizations = UserOrganization.objects.get_query_set()
 
-threat_models = get_threat_models(data)
+threat_models = get_threat_models()
 actors, ttps, tip_reports = threat_models
-
 if actors:
     add_actors(actors)
 
 #add_actor_relations(actors)
 
-#ttps = get_ttps(data)
 if ttps:
     add_ttps(ttps)
 
-#tip_reports = get_tip_reports(data)
 if tip_reports:
     add_tip_reports(tip_reports)
+
+associations = get_association_data()
+pprint(associations)
+add_association_data(associations)
