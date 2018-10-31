@@ -10,21 +10,41 @@ from ts.tsdb.models import BehaviorExploit
 from ts.tsdb.models import TipReport
 from ts.tsdb.models import UserOrganization
 import json
+import os
+import sys
 from psycopg2.extras import Json
 from pprint import pprint
 
+def get_threat_models(data):
+    actors = []
+    ttps = []
+    tip_reports = []
+    for threat_model in data:
+        if threat_model["model_type"] == "actor":
+            actors.append(threat_model)
+        if threat_model["model_type"] == "ttp":
+            ttps.append(threat_model)
+        if threat_model["model_type"] == "tipreport":
+            tip_reports.append(threat_model)
+    return (actors, ttps, tip_reports)
+
 def get_data():
     try:
-        with open('scripts/actor.json') as data_file:
-            data = json.load(data_file)
-            print("DATA TYPE")
-            print(type(data))
+        print(os.path.abspath(os.path.dirname(sys.argv[0])))
+        with open('/Users/msawey/threatstream/scripts/data.json') as data_file:
+            objects = json.load(data_file)
+            data = objects.get("objects")
             return data
-    except:
+    except Exception as e:
+        print(e)
         print("File does not exist")
         quit()
 
 def get_actors(data):
+    actors = []
+    for threat_model in data:
+        if threat_model["model_type"] == "actor":
+            actors.append(threat_model)
     return data.get("Actors")
 
 def get_ttps(data):
@@ -120,16 +140,19 @@ def add_tip_reports(tip_reports):
 
 data = get_data()
 User_Organizations = UserOrganization.objects.get_query_set()
-actors = get_actors(data)
+
+threat_models = get_threat_models(data)
+actors, ttps, tip_reports = threat_models
+
 if actors:
     add_actors(actors)
 
 #add_actor_relations(actors)
 
-ttps = get_ttps(data)
+#ttps = get_ttps(data)
 if ttps:
     add_ttps(ttps)
 
-tip_reports = get_tip_reports(data)
+#tip_reports = get_tip_reports(data)
 if tip_reports:
     add_tip_reports(tip_reports)
