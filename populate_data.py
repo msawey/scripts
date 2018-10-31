@@ -60,18 +60,24 @@ def get_user_org(id):
 
 def add_actors(actors):
     for actor in actors:
-        print(actor["name"][:255])
-        print(len(actor["name"]))
-        print(len(actor["name"][:255]))
-        print(actor["owner_user"]["id"])
+        actor_soph_type = actor.get("soph_type")
+        if actor_soph_type:
+            actor_soph_type_id = actor_soph_type.get("id")
+        else:
+            actor_soph_type_id = None
+        actor_owner_user = actor.get("owner_user")
+        if actor_owner_user:
+            actor_owner_user_id = actor_owner_user.get("id")
+        else:
+            actor_owner_user_id = None
         obj_actor, created = Actor.objects.get_or_create(\
             name=actor["name"][:255],\
-            tlp=actor["tlp"],\
-            start_date=actor["start_date"],\
-            soph_type_id=actor["soph_type"]["id"],\
-            description=actor["description"],\
-            organization_id=actor["organization_id"],\
-            owner_user_id=actor["owner_user"]["id"]\
+            tlp=actor.get("tlp"),\
+            start_date=actor.get("start_date"),\
+            soph_type_id=actor_soph_type_id,\
+            description=actor.get("description"),\
+            organization_id=actor.get("organization_id"),\
+            owner_user_id=actor_owner_user_id\
             )
         add_actor_aliases(obj_actor, actor["aliases"])
         add_actor_motivations(obj_actor, actor["motivations"])
