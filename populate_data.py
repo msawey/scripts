@@ -12,11 +12,10 @@ from ts.tsdb.models import UserOrganization
 import json
 import os
 import sys
-from  django.core.exceptions import
 from pprint import pprint
 
 THREAT_MODEL_FILE_PATH = '/Users/msawey/threatstream/scripts/data.json'
-ASSOCIATION_FILE_PATH = '/Users/msawey/threatstream/scripts/associations.json'
+ASSOCIATION_FILE_PATH = '/Users/msawey/threatstream/scripts/assoc_data.json'
 
 def get_threat_models():
     data = get_data(THREAT_MODEL_FILE_PATH)
@@ -54,13 +53,16 @@ def add_association_data(associations):
             if association.get("type1") == 'actor':
                 actor = Actor.objects.get(id=association.get("id1"))
                 add_threat_model_association(actor, association)
-            if association.get("type1") == 'ttp':
+            elif association.get("type1") == 'ttp':
                 ttp = Ttp.objects.get(id=association.get("id1"))
                 add_threat_model_association(ttp, association)
-            if association.get("type1") == 'tipreport':
+            elif association.get("type1") == 'tipreport':
                 tipreport = TipReport.objects.get(id=association.get("id1"))
                 add_threat_model_association(tipreport, association)
+            else:
+                print(association.get("type1") + " not currently supported")
         except:
+            print(association.get("id1"))
             print("Threat Model does not exist")
 
 def add_threat_model_association(threat_model, association):
@@ -71,6 +73,8 @@ def add_threat_model_association(threat_model, association):
             threat_model.ttps.add(association.get("id2"))
         elif association.get("type2") == 'tipreport':
             threat_model.tipreports.add(association.get("id2"))
+        else:
+            print(association.get("type2") + " not currently supported")
     except:
         print("Association does not exist")
 
@@ -115,6 +119,7 @@ def add_actors(actors):
             )
         add_actor_aliases(obj_actor, actor.get("aliases"))
         add_actor_motivations(obj_actor, actor.get("motivations"))
+        add_actor_operation_type(obj_actor, actor.get("types"))
         add_actor_victims(obj_actor, actor.get("victims"))
         obj_actor.add_tags(actor.get("tags_v2"), get_user_org(actor.get("organization_id")))
         obj_actor.save()
@@ -127,6 +132,11 @@ def add_actor_motivations(actor, motivations):
     for motivation in motivations:
         #TODO m_type_id to use .get()
         ActorMotivation.objects.get_or_create(actor_id=actor.id, description=motivation.get("description"), m_type_id=motivation["m_type"]["id"])
+
+def add_actor_operation_type(actor, operation_types):
+    for operation_type in operation_types:
+        a_type = operation_type.get('a_type')
+        actor.types.get_or_create(a_type_id=a_type.get('id'))
 
 def add_actor_victims(actor, victims):
     for victim in victims:
@@ -184,6 +194,9 @@ def add_tip_reports(tip_reports):
         obj_tip_report.add_tags(tip_report["tags_v2"], get_user_org(tip_report["owner_org_id"]))
         obj_tip_report.save()
 
+# Parse command line options (show usage if --help)
+config = parse_arguments()
+
 User_Organizations = UserOrganization.objects.get_query_set()
 
 threat_models = get_threat_models()
@@ -202,3 +215,4 @@ if tip_reports:
 associations = get_association_data()
 pprint(associations)
 add_association_data(associations)
+
